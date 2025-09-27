@@ -1,0 +1,20 @@
+# Binários e executáveis do Go
+/go_build
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Cache
+*.out
+
+# Pastas do Go
+/bin/
+/pkg/
+
+# Banco de dados SQLite
+*.db
+
+# Configurações locais
+.env
