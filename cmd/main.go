@@ -1,9 +1,13 @@
 package main
 
 import (
+	"fmt"
+	"go-api/config"
+	"go-api/middlewares"
 	user_model "go-api/model"
 	database "go-api/repository"
 	auth_routes "go-api/routes"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -11,18 +15,26 @@ import (
 
 func main() {
 	server := gin.Default()
+	config.Load()
 
 	database.Connect()
 	database.Migrate(&user_model.User{})
+
+	server.Use(middlewares.SanitizerMiddleware())
 
 	api := server.Group("/api")
 	{
 		auth_routes.Setup_routes_auth(api)
 	}
 
+	addr := fmt.Sprintf(":%s", config.Env_Config.SERVER_PORT)
 	srv := &http.Server{
-		Addr:    ":8080",
+		Addr:    addr,
 		Handler: server,
 	}
-	srv.ListenAndServe()
+
+	log.Printf("Servidor rodando na porta %s (env: %s)", config.Env_Config.SERVER_PORT, config.Env_Config.GOENV)
+	if err := srv.ListenAndServe(); err != nil {
+		log.Fatal("Erro ao inicia o servidor")
+	}
 }

@@ -1,5 +1,10 @@
 package structs_Auth
 
+type Auth_User_Response struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
 type Auth_User_Register struct {
 	Name     string `json:"name" binding:"required"`
 	Email    string `json:"email" binding:"required,email"`

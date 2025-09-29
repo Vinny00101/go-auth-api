@@ -1,7 +1,6 @@
 package auth_service
 
 // Service contém a lógica de autenticação, como registro e login de usuários.
-// Nao foi implementada ainda a parte de tokens JWT, mas pode ser adicionado futuramente.
 
 import (
 	"errors"
@@ -9,21 +8,24 @@ import (
 	structs_Auth "go-api/dto"
 	user_model "go-api/model"
 	database "go-api/repository"
-	"regexp"
+	"go-api/service/utils"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/microcosm-cc/bluemonday"
 	"golang.org/x/crypto/bcrypt"
 )
 
 var validate = validator.New()
 
 type AuthService struct{}
+type DataReturn struct {
+	USER *user_model.User
+	JWT  string
+}
 
 func (Service *AuthService) SanitizeInput(input string) string {
-	re := regexp.MustCompile(`[^\w\s@.-]`)
-	clean := re.ReplaceAllString(input, "")
-	re = regexp.MustCompile(`\s+`)
-	clean = re.ReplaceAllString(clean, " ")
+	policy := bluemonday.UGCPolicy()
+	clean := policy.Sanitize(input)
 	return clean
 }
 
@@ -37,7 +39,7 @@ func (Service *AuthService) VerifyPassword(hashedPassword, password string) bool
 	return err == nil
 }
 
-func (Service *AuthService) Create_User(request structs_Auth.Auth_User_Register) (*user_model.User, error) {
+func (Service *AuthService) Create_User(request structs_Auth.Auth_User_Register) (*DataReturn, error) {
 	// Lógica para criar um usuário no banco de dados
 	if err := validate.Struct(request); err != nil {
 		return nil, err
@@ -72,10 +74,20 @@ func (Service *AuthService) Create_User(request structs_Auth.Auth_User_Register)
 		return nil, errors.New("erro ao criar usuário")
 	}
 
-	return &user, nil
+	token, err := utils.JwtGeneration(int(user.ID))
+	if err != nil {
+		return nil, errors.New("erro ao gerar token")
+	}
+
+	Data_user := DataReturn{
+		USER: &user,
+		JWT:  token,
+	}
+
+	return &Data_user, nil
 }
 
-func (Service *AuthService) Authenticate_User(request structs_Auth.Auth_User_Login) (*user_model.User, error) {
+func (Service *AuthService) Authenticate_User(request structs_Auth.Auth_User_Login) (*DataReturn, error) {
 	// Lógica para autenticar um usuário no banco de dados
 	if err := validate.Struct(request); err != nil {
 		return nil, err
@@ -98,5 +110,15 @@ func (Service *AuthService) Authenticate_User(request structs_Auth.Auth_User_Log
 		return nil, errors.New("senha incorreta")
 	}
 
-	return &user, nil
+	token, err := utils.JwtGeneration(int(user.ID))
+	if err != nil {
+		return nil, errors.New("erro ao gerar token")
+	}
+
+	Data_user := DataReturn{
+		USER: &user,
+		JWT:  token,
+	}
+
+	return &Data_user, nil
 }
