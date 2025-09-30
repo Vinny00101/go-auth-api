@@ -74,7 +74,7 @@ func (Service *AuthService) Create_User(request structs_Auth.Auth_User_Register)
 		return nil, errors.New("erro ao criar usuário")
 	}
 
-	token, err := utils.JwtGeneration(int(user.ID))
+	token, err := utils.JwtGeneration(int(user.ID), user.Email)
 	if err != nil {
 		return nil, errors.New("erro ao gerar token")
 	}
@@ -110,7 +110,7 @@ func (Service *AuthService) Authenticate_User(request structs_Auth.Auth_User_Log
 		return nil, errors.New("senha incorreta")
 	}
 
-	token, err := utils.JwtGeneration(int(user.ID))
+	token, err := utils.JwtGeneration(int(user.ID), user.Email)
 	if err != nil {
 		return nil, errors.New("erro ao gerar token")
 	}
@@ -121,4 +121,16 @@ func (Service *AuthService) Authenticate_User(request structs_Auth.Auth_User_Log
 	}
 
 	return &Data_user, nil
+}
+
+func (Service *AuthService) Get_User_By_ID(userID uint) (*structs_Auth.Auth_User_Response, error) {
+	var user user_model.User
+	if database.DB.First(&user, userID).Error != nil {
+		return nil, errors.New("usuário não encontrado")
+	}
+	user_response := &structs_Auth.Auth_User_Response{
+		Name:  user.Name,
+		Email: user.Email,
+	}
+	return user_response, nil
 }

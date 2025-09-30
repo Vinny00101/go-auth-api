@@ -28,9 +28,6 @@ func AuthMiddleware() gin.HandlerFunc {
 		token := parts[1]
 		claims := &jwt.RegisteredClaims{}
 		t, err := jwt.ParseWithClaims(token, claims, func(t *jwt.Token) (interface{}, error) {
-			if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
-				return nil, jwt.ErrTokenInvalidClaims
-			}
 			return jwtSecret, nil
 		})
 

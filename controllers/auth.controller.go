@@ -1,7 +1,6 @@
 package auth_controllers
 
 import (
-	database "go-api/Repository"
 	structs_Auth "go-api/dto"
 	auth_service "go-api/service"
 	"net/http"
@@ -11,8 +10,9 @@ import (
 
 type AuthController struct{}
 
+var service = &auth_service.AuthService{}
+
 func (controller *AuthController) Register_auth(context *gin.Context) {
-	service := &auth_service.AuthService{}
 	var request structs_Auth.Auth_User_Register
 
 	if err := context.ShouldBindJSON(&request); err != nil {
@@ -39,7 +39,6 @@ func (controller *AuthController) Register_auth(context *gin.Context) {
 }
 
 func (controller *AuthController) Login_auth(context *gin.Context) {
-	service := &auth_service.AuthService{}
 	var request structs_Auth.Auth_User_Login
 
 	if err := context.ShouldBindJSON(&request); err != nil {
@@ -72,13 +71,9 @@ func (controller *AuthController) Me_auth(context *gin.Context) {
 		return
 	}
 
-	var user *structs_Auth.Auth_User_Response
-	if err := database.DB.First(&user, userID).Error; err != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao buscar usuário"})
-		return
-	}
+	user, err := service.Get_User_By_ID(userID.(uint))
 
-	if user == nil {
+	if err != nil {
 		context.JSON(http.StatusNotFound, gin.H{"error": "Usuário não encontrado"})
 		return
 	}
