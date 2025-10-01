@@ -9,9 +9,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var jwtSecret = []byte(config.Env_Config.SECRET_KEY)
-
 func AuthMiddleware() gin.HandlerFunc {
+	jwtSecret := []byte(config.Env_Config.SECRET_KEY)
 	return func(ctx *gin.Context) {
 		authHeader := ctx.GetHeader("Authorization")
 		if authHeader == " " {

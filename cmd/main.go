@@ -14,8 +14,16 @@ import (
 )
 
 func main() {
+	configs, err := config.Load()
+	if err != nil {
+		log.Fatal("Erro ao carregar configurações")
+	}
+	config.Env_Config = configs
+
+	if config.Env_Config.GOENV == "production" {
+		gin.SetMode(gin.ReleaseMode)
+	}
 	server := gin.Default()
-	config.Load()
 
 	database.Connect()
 	database.Migrate(&user_model.User{})

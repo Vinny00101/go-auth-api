@@ -11,7 +11,7 @@ import (
 var DB *gorm.DB
 
 func Connect() {
-	db, err := gorm.Open(sqlite.Open("SQlite.db"), &gorm.Config{
+	db, err := gorm.Open(sqlite.Open("../SQlite.db"), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
 	})
 	if err != nil {

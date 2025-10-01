@@ -3,6 +3,8 @@ package config
 import (
 	"log"
 	"os"
+
+	"github.com/joho/godotenv"
 )
 
 type Configs struct {
@@ -13,7 +15,12 @@ type Configs struct {
 
 var Env_Config *Configs
 
-func Load() {
+func Load() (Config *Configs, err error) {
+	err = godotenv.Load("../.env")
+	if err != nil {
+		log.Println("Aviso: não foi possível carregar .env, usando variáveis do sistema")
+	}
+
 	GOENV := os.Getenv("GOENV")
 	SERVER_PORT := os.Getenv("SERVER_PORT")
 	SECRET_KEY := os.Getenv("SECRET_KEY")
@@ -22,9 +29,10 @@ func Load() {
 		log.Fatal("Variáveis de ambiente não definidas corretamente")
 	}
 
-	Env_Config = &Configs{
+	Config = &Configs{
 		GOENV:       GOENV,
 		SERVER_PORT: SERVER_PORT,
 		SECRET_KEY:  SECRET_KEY,
 	}
+	return Config, nil
 }
