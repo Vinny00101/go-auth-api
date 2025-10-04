@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"go-api/config"
 	"go-api/middlewares"
-	user_model "go-api/model"
-	database "go-api/repository"
-	auth_routes "go-api/routes"
+	"go-api/model"
+	"go-api/routes"
 	"log"
 	"net/http"
 
@@ -25,14 +24,14 @@ func main() {
 	}
 	server := gin.Default()
 
-	database.Connect()
-	database.Migrate(&user_model.User{})
-
+	config.Connect()
+	config.Migrate(&model.User{})
 	server.Use(middlewares.SanitizerMiddleware())
 
 	api := server.Group("/api")
 	{
-		auth_routes.Setup_routes_auth(api)
+		routes.Setup_routes_auth(api)
+		routes.Setup_routes_user(api)
 	}
 
 	addr := fmt.Sprintf(":%s", config.Env_Config.SERVER_PORT)

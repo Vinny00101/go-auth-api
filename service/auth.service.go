@@ -3,12 +3,13 @@ package auth_service
 // Service contém a lógica de autenticação, como registro e login de usuários.
 
 import (
-	"errors"
+	"net/http"
 
+	"go-api/config/err"
 	structs_Auth "go-api/dto"
 	user_model "go-api/model"
-	database "go-api/repository"
-	"go-api/service/utils"
+	"go-api/repository"
+	"go-api/utils"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/microcosm-cc/bluemonday"
@@ -39,14 +40,14 @@ func (Service *AuthService) VerifyPassword(hashedPassword, password string) bool
 	return err == nil
 }
 
-func (Service *AuthService) Create_User(request structs_Auth.Auth_User_Register) (*DataReturn, error) {
+func (Service *AuthService) Create_User(request structs_Auth.Auth_User_Register) (*DataReturn, *err.HttpError) {
 	// Lógica para criar um usuário no banco de dados
-	if err := validate.Struct(request); err != nil {
-		return nil, err
+	if errs := validate.Struct(request); errs != nil {
+		return nil, err.NewErrorHttp(http.StatusBadRequest, "Campos invalidos")
 	}
 
 	if request.Name == "" || request.Email == "" || request.Password == "" {
-		return nil, errors.New("todos os campos são obrigatórios")
+		return nil, err.NewErrorHttp(http.StatusBadRequest, "todos os campos são obrigatórios")
 	}
 
 	// Sanitiza os inputs
@@ -54,12 +55,12 @@ func (Service *AuthService) Create_User(request structs_Auth.Auth_User_Register)
 	request.Email = Service.SanitizeInput(request.Email)
 	request.Password = Service.SanitizeInput(request.Password)
 
-	if database.DB.Where("email = ?", request.Email).First(&user_model.User{}).Error == nil {
-		return nil, errors.New("email já cadastrado")
+	if repository.Where_user_verify(request.Email) {
+		return nil, err.NewErrorHttp(http.StatusFound, "email já cadastrado")
 	}
 
 	if len(request.Password) < 8 {
-		return nil, errors.New("senha deve ter pelo menos 8 caracteres")
+		return nil, err.NewErrorHttp(http.StatusLengthRequired, "senha deve ter pelo menos 8 caracteres")
 	}
 
 	Hash, _ := Service.HashPassword(request.Password)
@@ -70,13 +71,13 @@ func (Service *AuthService) Create_User(request structs_Auth.Auth_User_Register)
 		PasswordHash: Hash,
 	}
 
-	if err := database.DB.Create(&user).Error; err != nil {
-		return nil, errors.New("erro ao criar usuário")
+	if !repository.Create_User(&user) {
+		return nil, err.NewErrorHttp(http.StatusInternalServerError, "erro ao criar usuário")
 	}
 
-	token, err := utils.JwtGeneration(int(user.ID), user.Email)
-	if err != nil {
-		return nil, errors.New("erro ao gerar token")
+	token, errs := utils.JwtGeneration(int(user.ID), user.Email)
+	if errs != nil {
+		return nil, err.NewErrorHttp(http.StatusInternalServerError, "erro ao gerar token")
 	}
 
 	Data_user := DataReturn{
@@ -87,46 +88,45 @@ func (Service *AuthService) Create_User(request structs_Auth.Auth_User_Register)
 	return &Data_user, nil
 }
 
-func (Service *AuthService) Authenticate_User(request structs_Auth.Auth_User_Login) (*DataReturn, error) {
+func (Service *AuthService) Authenticate_User(request structs_Auth.Auth_User_Login) (*DataReturn, *err.HttpError) {
 	// Lógica para autenticar um usuário no banco de dados
-	if err := validate.Struct(request); err != nil {
-		return nil, err
+	if errs := validate.Struct(request); errs != nil {
+		return nil, err.NewErrorHttp(http.StatusBadRequest, "Campos invalidos")
 	}
-
 	if request.Email == "" || request.Password == "" {
-		return nil, errors.New("todos os campos são obrigatórios")
+		return nil, err.NewErrorHttp(http.StatusBadRequest, "todos os campos são obrigatórios")
 	}
 
 	// Sanitiza os inputs
 	request.Email = Service.SanitizeInput(request.Email)
 	request.Password = Service.SanitizeInput(request.Password)
 
-	var user user_model.User
-	if database.DB.Where("email = ?", request.Email).First(&user).Error != nil {
-		return nil, errors.New("email não cadastrado")
+	user := repository.Get_user_by_email(request.Email)
+	if user == nil {
+		return nil, err.NewErrorHttp(http.StatusBadRequest, "usuário não encontrado")
 	}
 
 	if !Service.VerifyPassword(user.PasswordHash, request.Password) {
-		return nil, errors.New("senha incorreta")
+		return nil, err.NewErrorHttp(http.StatusUnauthorized, "senha incorreta")
 	}
 
-	token, err := utils.JwtGeneration(int(user.ID), user.Email)
-	if err != nil {
-		return nil, errors.New("erro ao gerar token")
+	token, errs := utils.JwtGeneration(int(user.ID), user.Email)
+	if errs != nil {
+		return nil, err.NewErrorHttp(http.StatusInternalServerError, "erro ao gerar token")
 	}
 
 	Data_user := DataReturn{
-		USER: &user,
+		USER: user,
 		JWT:  token,
 	}
 
 	return &Data_user, nil
 }
 
-func (Service *AuthService) Get_User_By_ID(userID uint) (*structs_Auth.Auth_User_Response, error) {
-	var user user_model.User
-	if database.DB.First(&user, userID).Error != nil {
-		return nil, errors.New("usuário não encontrado")
+func (Service *AuthService) Get_User_By_ID(userID uint) (*structs_Auth.Auth_User_Response, *err.HttpError) {
+	user := repository.Get_User_By_ID(userID)
+	if user == nil {
+		return nil, err.NewErrorHttp(http.StatusNotFound, "usuário não encontrado")
 	}
 	user_response := &structs_Auth.Auth_User_Response{
 		Name:  user.Name,

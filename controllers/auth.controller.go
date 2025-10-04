@@ -22,7 +22,7 @@ func (controller *AuthController) Register_auth(context *gin.Context) {
 
 	res, err := service.Create_User(request)
 	if err != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		context.JSON(err.Code(), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -48,7 +48,7 @@ func (controller *AuthController) Login_auth(context *gin.Context) {
 
 	res, err := service.Authenticate_User(request)
 	if err != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		context.JSON(err.Code(), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -74,7 +74,7 @@ func (controller *AuthController) Me_auth(context *gin.Context) {
 	user, err := service.Get_User_By_ID(userID.(uint))
 
 	if err != nil {
-		context.JSON(http.StatusNotFound, gin.H{"error": "Usuário não encontrado"})
+		context.JSON(err.Code(), gin.H{"error": err.Error()})
 		return
 	}
 

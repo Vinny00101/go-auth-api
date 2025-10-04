@@ -1,4 +1,4 @@
-package auth_routes
+package routes
 
 import (
 	auth_controllers "go-api/controllers"

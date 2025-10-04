@@ -16,9 +16,9 @@ type Configs struct {
 var Env_Config *Configs
 
 func Load() (Config *Configs, err error) {
-	err = godotenv.Load("../.env")
+	err = godotenv.Load(".env")
 	if err != nil {
-		log.Println("Aviso: não foi possível carregar .env, usando variáveis do sistema")
+		log.Println("Aviso: não foi possível carregar .env, usando variáveis do sistema", err)
 	}
 
 	GOENV := os.Getenv("GOENV")
